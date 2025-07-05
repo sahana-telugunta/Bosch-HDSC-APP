@@ -1,13 +1,13 @@
 const mongoose = require('mongoose');
 
-const IncidentSchema = new mongoose.Schema({
+const incidentSchema = new mongoose.Schema({
+  email: String,
   location: String,
   category: String,
-  subCategory: String,
   comment: String,
-  email: String,
-  imageBase64: String, 
+  imageBase64: String,
+  reportingPersons: [String], // ✅ NEW FIELD (Array of names)
   timestamp: { type: Date, default: Date.now },
 });
 
-module.exports = mongoose.model('Incident', IncidentSchema);
+module.exports = mongoose.model('Incident', incidentSchema);
