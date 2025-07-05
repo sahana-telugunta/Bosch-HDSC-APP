@@ -34,7 +34,7 @@ export default function SignupScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <Image source={require('../assets/bosch-logo.png')} style={styles.logo} />
-      <Text style={styles.title}>Sign Up - Bosch HSE</Text>
+      <Text style={styles.title}>Sign Up - Bosch Incident App</Text>
 
       <TextInput
         style={styles.input}
