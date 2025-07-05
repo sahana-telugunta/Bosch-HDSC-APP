@@ -1,39 +1,66 @@
 const express = require('express');
 const router = express.Router();
 const Incident = require('../models/Incident');
+const sendIncidentEmail = require('../utils/mailer');
 
+
+// Create incident
 router.post('/', async (req, res) => {
-  console.log('📩 Incoming incident:', req.body);
-
   try {
-    const incident = new Incident(req.body);
+    const {
+      incidentArea, // sent from frontend
+      category,
+      comment,
+      imageBase64,
+      email,
+      reportingPersons = [],
+    } = req.body;
+
+    const incident = new Incident({
+      location: incidentArea,        // Map to DB field "location"
+      category,
+      comment,
+      imageBase64,
+      email,
+      reportingPersons,
+    });
+
     await incident.save();
-    console.log('✅ Incident saved to DB');
+
+    // Compose and send email
+    await sendIncidentEmail({
+      to: Array.isArray(reportingPersons)
+        ? reportingPersons.map(name =>
+  `${name.toLowerCase().replace(/\s+/g, '')}@gmail.com`
+)
+        : [],
+      subject: 'New HSE Incident Reported',
+      incident: {
+        incidentArea,
+        category,
+        comment,
+        reportingPersons,
+        imageBase64,
+      },
+    });
+
+
     res.status(201).json({ message: 'Incident saved' });
   } catch (err) {
-    console.error('❌ Error saving incident:', err.message);
+    console.error('❌ Error saving incident:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
-
-// ✅ Get all incidents
-// GET incidents for a specific user
-// GET /api/incidents/:email
+// Get incidents by user email
 router.get('/:email', async (req, res) => {
-  const email = req.params.email;
-  console.log('🔍 Fetching incidents for email:', email);
-
   try {
-    const incidents = await Incident.find({ email }).sort({ createdAt: -1 });
-    console.log(`✅ Found ${incidents.length} incidents for ${email}`);
-    res.status(200).json(incidents);
+    const incidents = await Incident.find({ email: req.params.email });
+    res.json(incidents);
   } catch (err) {
-    console.error('❌ Error fetching incidents:', err.message);
+    console.error('❌ Error fetching incidents:', err);
     res.status(500).json({ error: err.message });
   }
 });
-
-
 
 module.exports = router;

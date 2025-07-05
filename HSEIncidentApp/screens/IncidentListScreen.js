@@ -1,5 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, Image } from 'react-native';
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  Image,
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 
@@ -16,132 +22,80 @@ export default function IncidentListScreen() {
 
     try {
       const response = await axios.get(`http://192.168.29.135:5000/api/incidents/${email}`);
-      console.log('📦 Fetched incidents:', response.data);
-      setIncidents(response.data);
+      const sorted = response.data.sort(
+        (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+      );
+      setIncidents(sorted);
     } catch (error) {
       console.error('❌ Error fetching incidents:', error);
     }
   };
 
   const renderItem = ({ item }) => (
-    <View style={styles.item}>
-      <Text style={styles.label}>📍 Location:</Text>
-      <Text>{item.location}</Text>
-
-      <Text style={styles.label}>🗂 Category:</Text>
-      <Text>{item.category} - {item.subCategory}</Text>
-
-      <Text style={styles.label}>📝 Comment:</Text>
-      <Text>{item.comment}</Text>
-
-        {item.imageBase64 && (
+    <View style={styles.card}>
+      <Text style={styles.label}>📸 Incident Image:</Text>
+      {item.imageBase64 ? (
         <Image
-            source={{ uri: `data:image/jpeg;base64,${item.imageBase64}` }}
-            style={styles.image}
+          source={{ uri: `data:image/jpeg;base64,${item.imageBase64}` }}
+          style={styles.image}
         />
-        )}
+      ) : (
+        <Text style={styles.noImage}>📷 No image submitted</Text>
+      )}
 
+      <Text style={styles.label}>📅 Incident Time:</Text>
+      <Text>{new Date(item.timestamp).toLocaleString()}</Text>
+
+      <Text style={styles.label}>📍 Incident Area:</Text>
+      <Text>{item.incidentArea || item.location || 'N/A'}</Text>
+
+      <Text style={styles.label}>📂 Category:</Text>
+      <Text>{item.category}</Text>
+
+      <Text style={styles.label}>👥 Reported To:</Text>
+      <Text>{item.reportingPersons?.length > 0 ? item.reportingPersons.join(', ') : 'None selected'}</Text>
+
+      <Text style={styles.label}>📝 Comments:</Text>
+      <Text>{item.comment}</Text>
     </View>
   );
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Your Reported Incidents</Text>
+      <Text style={styles.heading}>Your Reported Incidents</Text>
       <FlatList
         data={incidents}
-        keyExtractor={(item, index) => index.toString()}
+        keyExtractor={(item) => item._id}
         renderItem={renderItem}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: 20 }}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20 },
-  title: { fontSize: 20, fontWeight: 'bold', marginBottom: 15, color: '#005A9C' },
-  item: {
+  container: { flex: 1, padding: 16, backgroundColor: '#fff' },
+  heading: { fontSize: 20, fontWeight: 'bold', marginBottom: 10, color: '#005A9C' },
+  card: {
+    backgroundColor: '#f1f8e9',
     padding: 15,
-    backgroundColor: '#e3f2fd',
-    borderRadius: 8,
-    marginBottom: 15,
+    borderRadius: 10,
+    marginBottom: 12,
+    elevation: 2,
   },
-  label: { fontWeight: 'bold', marginTop: 5 },
+  label: { fontWeight: 'bold', marginTop: 6 },
   image: {
     width: '100%',
-    height: 200,
-    marginTop: 10,
+    height: 180,
+    marginBottom: 10,
     borderRadius: 8,
-    resizeMode: 'cover',
   },
   noImage: {
-    marginTop: 10,
+    backgroundColor: '#eee',
+    padding: 10,
+    borderRadius: 6,
+    textAlign: 'center',
+    marginBottom: 10,
     fontStyle: 'italic',
-    color: '#777',
   },
 });
-
-
-
-
-
-
-// import React, { useEffect, useState } from 'react';
-// import { View, Text, FlatList, StyleSheet, Image, TouchableOpacity } from 'react-native';
-// import axios from 'axios';
-
-// export default function IncidentListScreen({ navigation }) {
-//   const [incidents, setIncidents] = useState([]);
-
-//   useEffect(() => {
-//     fetchIncidents();
-//   }, []);
-
-// useEffect(() => {
-//   fetchIncidents();
-// }, []);
-
-// const fetchIncidents = async () => {
-//   const email = await AsyncStorage.getItem('userEmail');
-//   console.log('📥 Fetching incidents for:', email);
-
-//   try {
-//     const response = await axios.get(`http://192.168.29.135:5000/api/incidents/${email}`);
-//     console.log('📦 Fetched incidents:', response.data);
-//     setIncidents(response.data);
-//   } catch (error) {
-//     console.error('❌ Error fetching incidents:', error);
-//   }
-// };
-
-
-//   const renderItem = ({ item }) => (
-//     <View style={styles.card}>
-//       <Text style={styles.title}>{item.category} - {item.subCategory}</Text>
-//       <Text style={styles.label}>Location: {item.location}</Text>
-//       <Text style={styles.label}>Comments: {item.comment}</Text>
-//       {item.imageUrl && <Image source={{ uri: item.imageUrl }} style={styles.image} />}
-//     </View>
-//   );
-
-//   return (
-//     <View style={styles.container}>
-//       <Text style={styles.heading}>All Reported Incidents</Text>
-//       <FlatList
-//         data={incidents}
-//         keyExtractor={(item) => item._id}
-//         renderItem={renderItem}
-//         contentContainerStyle={{ paddingBottom: 20 }}
-//       />
-//     </View>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   container: { flex: 1, padding: 16, backgroundColor: '#fff' },
-//   heading: { fontSize: 20, fontWeight: 'bold', marginBottom: 10, color: '#005A9C' },
-//   card: { backgroundColor: '#f5f5f5', padding: 12, borderRadius: 8, marginBottom: 10 },
-//   title: { fontSize: 16, fontWeight: 'bold', color: '#333' },
-//   label: { marginTop: 4, color: '#555' },
-//   image: { width: '100%', height: 150, marginTop: 8, borderRadius: 6 },
-// });

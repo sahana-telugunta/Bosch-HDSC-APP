@@ -1,20 +1,36 @@
 import React, { useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from 'expo-file-system';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  Image,
+  ScrollView
+} from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { Picker } from '@react-native-picker/picker';
+import { MultiSelect } from 'react-native-element-dropdown';
 import axios from 'axios';
 
 export default function IncidentScreen({ navigation }) {
-  const [location, setLocation] = useState('');
-  const [category, setCategory] = useState('');
-  const [subCategory, setSubCategory] = useState('');
+  const [incidentArea, setIncidentArea] = useState('');
+  const [category, setCategory] = useState('HSE Incident');
   const [comment, setComment] = useState('');
-  const [image, setImage] = useState(null);
+  const [uploadImage, setUploadImage] = useState(null);
+  const [cameraImage, setCameraImage] = useState(null);
+  const [reportingPersons, setReportingPersons] = useState([]);
 
-const pickImage = async () => {
-  console.log('📲 Upload Image button clicked');
-  try {
+  const peopleOptions = [
+    { label: 'John Doe' },
+    { label: 'Sahana Main' },
+    { label: 'Alice Kumar' },
+    { label: 'Bob Reddy' },
+  ];
+
+  const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission Denied', 'Please allow access to media library.');
@@ -22,170 +38,258 @@ const pickImage = async () => {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images, // ✅ fix deprecation warning
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.7,
       base64: true,
     });
 
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      const selectedImage = result.assets[0];
-      console.log('✅ Image selected:', selectedImage.uri);
-      setImage(selectedImage.base64); // store base64
-    } else {
-      console.log('⚠️ No image selected');
+    if (!result.canceled && result.assets.length > 0) {
+      const selected = result.assets[0];
+      setUploadImage(selected.base64);
+      setCameraImage(null);
     }
-  } catch (error) {
-    console.error('❌ Error picking image:', error);
-    Alert.alert('Error', 'Failed to pick image');
-  }
-};
+  };
 
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Denied', 'Camera access is required.');
+      return;
+    }
 
-const handleSubmit = async () => {
-  if (!location || !category || !subCategory || !comment) {
-    Alert.alert('Error', 'Please fill all fields');
-    return;
-  }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.7,
+      base64: true,
+    });
 
-  try {
-    const email = await AsyncStorage.getItem('userEmail');
-    console.log('📤 Submitting incident for', email);
+    if (!result.canceled && result.assets.length > 0) {
+      const selected = result.assets[0];
+      setCameraImage(selected.base64);
+      setUploadImage(null);
+    }
+  };
 
-    const response = await axios.post(
-      'http://192.168.29.135:5000/api/incidents',
-      {
-        location,
+  const handleSubmit = async () => {
+    if (!incidentArea || !category || !comment || reportingPersons.length === 0) {
+      Alert.alert('Error', 'Please fill all fields and select at least one reporter.');
+      return;
+    }
+
+    try {
+      const email = await AsyncStorage.getItem('userEmail');
+      const finalImage = uploadImage || cameraImage;
+
+      const response = await axios.post('http://192.168.29.135:5000/api/incidents', {
+        incidentArea,
         category,
-        subCategory,
         comment,
-        imageBase64: image || null, // ← just send the base‑64 string
+        imageBase64: finalImage,
         email,
-      }
-    );
+        reportingPersons,
+      });
 
-    console.log('✅ Incident submitted:', response.data);
-    Alert.alert('Success', 'Incident submitted!');
-    // clear form
-    setLocation('');
-    setCategory('');
-    setSubCategory('');
-    setComment('');
-    setImage(null);
-  } catch (error) {
-    console.error('❌ Error submitting incident:', error);
-    Alert.alert('Error', 'Failed to submit incident');
-  }
-};
+      Alert.alert('Success', 'Incident submitted!');
+      setIncidentArea('');
+      setCategory('HSE Incident');
+      setComment('');
+      setUploadImage(null);
+      setCameraImage(null);
+      setReportingPersons([]);
+    } catch (error) {
+      console.error('❌ Error submitting incident:', error);
+      Alert.alert('Error', 'Failed to submit incident');
+    }
+  };
 
-
-
-
-const handleLogout = async () => {
-  try {
+  const handleLogout = async () => {
     await AsyncStorage.removeItem('isLoggedIn');
     await AsyncStorage.removeItem('userEmail');
-    Alert.alert('Logged Out', 'You have been logged out.');
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'Login' }],
-    });
-  } catch (error) {
-    console.error('Logout error:', error);
-    Alert.alert('Error', 'Unable to logout.');
-  }
-};
-
+    navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Report HSE/5S Incident</Text>
+      <Text style={styles.title}>HSE Incident Reporting</Text>
 
+      <Text style={styles.label}>Incident Image:</Text>
+
+      <TouchableOpacity style={styles.imageButton} onPress={pickImage}>
+        <Text style={styles.buttonText}>Upload Image</Text>
+      </TouchableOpacity>
+      {uploadImage && (
+        <View style={styles.imagePreviewWrapper}>
+          <Image
+            source={{ uri: `data:image/jpeg;base64,${uploadImage}` }}
+            style={styles.previewImage}
+          />
+          <TouchableOpacity
+            style={styles.removeButton}
+            onPress={() => setUploadImage(null)}
+          >
+            <Text style={styles.removeButtonText}>❌</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      <Text style={styles.orText}>or</Text>
+
+      <TouchableOpacity style={styles.imageButton} onPress={takePhoto}>
+        <Text style={styles.buttonText}>Take a Photo</Text>
+      </TouchableOpacity>
+      {cameraImage && (
+        <View style={styles.imagePreviewWrapper}>
+          <Image
+            source={{ uri: `data:image/jpeg;base64,${cameraImage}` }}
+            style={styles.previewImage}
+          />
+          <TouchableOpacity
+  style={styles.removeButton}
+  onPress={() => {
+    setUploadImage(null);
+    setCameraImage(null);
+  }}
+>
+  <Text style={styles.removeButtonText}>❌</Text>
+</TouchableOpacity>
+
+        </View>
+      )}
+
+      <Text style={styles.label}>Incident Area:</Text>
       <TextInput
         style={styles.input}
-        placeholder="Location"
-        value={location}
-        onChangeText={setLocation}
+        placeholder="Enter area"
+        value={incidentArea}
+        onChangeText={setIncidentArea}
       />
 
-      <TextInput
-        style={styles.input}
-        placeholder="Category (e.g. HSE or 5S)"
-        value={category}
-        onChangeText={setCategory}
+      <Text style={styles.label}>Category:</Text>
+      <View style={styles.pickerWrapper}>
+        <Picker selectedValue={category} onValueChange={setCategory}>
+          <Picker.Item label="HSE Incident" value="HSE Incident" />
+          <Picker.Item label="5S" value="5S" />
+        </Picker>
+      </View>
+
+      <Text style={styles.label}>Reporting Person(s):</Text>
+      <MultiSelect
+        style={styles.multiSelect}
+        data={peopleOptions}
+        labelField="label"
+        valueField="label"
+        placeholder="Select people"
+        value={reportingPersons}
+        onChange={setReportingPersons}
+        selectedStyle={styles.selectedStyle}
       />
 
-      <TextInput
-        style={styles.input}
-        placeholder="Sub-category"
-        value={subCategory}
-        onChangeText={setSubCategory}
-      />
-
+      <Text style={styles.label}>Comments:</Text>
       <TextInput
         style={[styles.input, { height: 80 }]}
-        placeholder="Comments"
+        placeholder="Enter comments"
         value={comment}
         onChangeText={setComment}
         multiline
       />
 
-      <TouchableOpacity style={styles.imageButton} onPress={pickImage}>
-        <Text style={styles.buttonText}>Upload Image</Text>
-      </TouchableOpacity>
-
-      {image && (
-  <Image
-    source={{ uri: `data:image/jpeg;base64,${image}` }}
-    style={styles.previewImage}
-  />
-)}
-
       <TouchableOpacity style={styles.button} onPress={handleSubmit}>
         <Text style={styles.buttonText}>Submit Incident</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.listButton} onPress={() => navigation.navigate('IncidentList')}>
+      <TouchableOpacity
+        style={styles.listButton}
+        onPress={() => navigation.navigate('IncidentList')}
+      >
         <Text style={styles.buttonText}>View All Incidents</Text>
       </TouchableOpacity>
 
-      {/* ✅ Logout button inside return */}
       <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
         <Text style={styles.logoutText}>Logout</Text>
       </TouchableOpacity>
-
-
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    paddingTop: 50,
-    paddingBottom: 50,
-    paddingHorizontal: 20,
+    padding: 20,
     backgroundColor: '#fff',
-    alignItems: 'stretch',
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     color: '#005A9C',
     fontWeight: 'bold',
     marginBottom: 20,
     alignSelf: 'center',
   },
+  label: {
+    fontWeight: 'bold',
+    marginTop: 10,
+  },
   input: {
     borderWidth: 1,
     borderColor: '#aaa',
-    padding: 12,
+    padding: 10,
     borderRadius: 6,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   imageButton: {
     backgroundColor: '#6A1B9A',
     padding: 12,
     borderRadius: 6,
     alignItems: 'center',
-    marginBottom: 12,
+    marginVertical: 10,
+  },
+  orText: {
+    alignSelf: 'center',
+    fontWeight: 'bold',
+    color: '#333',
+    marginVertical: 4,
+  },
+  imagePreviewWrapper: {
+    position: 'relative',
+    marginBottom: 10,
+    alignItems: 'center',
+  },
+  previewImage: {
+    width: '100%',
+    height: 180,
+    borderRadius: 8,
+  },
+  removeButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 5,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    zIndex: 10,
+    elevation: 5,
+  },
+  removeButtonText: {
+    fontSize: 18,
+    color: '#ff0000',
+    fontWeight: 'bold',
+  },
+
+  pickerWrapper: {
+    borderWidth: 1,
+    borderColor: '#aaa',
+    borderRadius: 6,
+    marginBottom: 10,
+  },
+  multiSelect: {
+    borderWidth: 1,
+    borderColor: '#aaa',
+    borderRadius: 6,
+    padding: 10,
+    marginBottom: 10,
+  },
+  selectedStyle: {
+    backgroundColor: '#d1e7ff',
   },
   button: {
     backgroundColor: '#005A9C',
@@ -198,11 +302,12 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
   },
-  previewImage: {
-    width: '100%',
-    height: 180,
-    borderRadius: 8,
-    marginBottom: 10,
+  listButton: {
+    backgroundColor: '#00796B',
+    padding: 14,
+    borderRadius: 6,
+    alignItems: 'center',
+    marginTop: 12,
   },
   logoutBtn: {
     backgroundColor: 'red',
@@ -215,13 +320,4 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
   },
-
-  listButton: {
-  backgroundColor: '#00796B',
-  padding: 14,
-  borderRadius: 6,
-  alignItems: 'center',
-  marginTop: 12,
-},
-
 });
