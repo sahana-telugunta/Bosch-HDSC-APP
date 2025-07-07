@@ -111,8 +111,8 @@ export default function IncidentListScreen({ navigation }) {
       <Text style={styles.label}>👥 Reported To:</Text>
       <Text>{item.reportingPersons?.join(', ') || 'None'}</Text>
 
-      <Text style={styles.label}>📝 Comments:</Text>
-      <Text>{item.comment}</Text>
+      <Text style={styles.label}>📝 Description:</Text>
+      <Text>{item.description}</Text>
     </View>
   );
 

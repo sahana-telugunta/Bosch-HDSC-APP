@@ -4,7 +4,7 @@ const incidentSchema = new mongoose.Schema({
   email: String,
   location: String,
   category: String,
-  comment: String,
+  description: String,
   imageBase64: String,
   reportingPersons: [String], // ✅ NEW FIELD (Array of names)
   timestamp: { type: Date, default: Date.now },

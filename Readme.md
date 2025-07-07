@@ -32,7 +32,7 @@ HSEIncidentBackend/    # Node.js + Express server & MongoDB models
 - **Login / Signup** (email + password)
 - **Report incident** with:
   - Image (gallery **or** camera)
-  - Area, category, comment
+  - Area, category, description
   - Multi‑select reporting persons  
 - **Incident list** with filters (date, category) & recent‑first sort
 - **Email notifications** with image attached
