@@ -8,20 +8,25 @@ export default function ResetPasswordScreen({ route, navigation }) {
   const { email } = route.params;
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleReset = async () => {
-    if (!code || !newPassword) {
+    if (!code || !newPassword || !confirmPassword) {
       Alert.alert('Error', 'Enter all fields');
       return;
     }
-
+    if (newPassword !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
+      return;
+    }
     try {
       const response = await axios.post('http://192.168.29.135:5000/api/auth/reset-password', {
         email,
         code,
         newPassword
       });
-
       Alert.alert('Success', 'Password reset successfully');
       navigation.replace('Login');
     } catch (error) {
@@ -46,13 +51,36 @@ export default function ResetPasswordScreen({ route, navigation }) {
         style={styles.input}
         keyboardType="numeric"
       />
-      <TextInput
-        placeholder="Enter new password"
-        value={newPassword}
-        onChangeText={setNewPassword}
-        secureTextEntry
-        style={styles.input}
-      />
+      <View style={{ position: 'relative' }}>
+        <TextInput
+          placeholder="Enter new password"
+          value={newPassword}
+          onChangeText={setNewPassword}
+          secureTextEntry={!showPassword}
+          style={styles.input}
+        />
+        <TouchableOpacity
+          style={{ position: 'absolute', right: 12, top: 18 }}
+          onPress={() => setShowPassword((prev) => !prev)}
+        >
+          <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={22} color="#888" />
+        </TouchableOpacity>
+      </View>
+      <View style={{ position: 'relative' }}>
+        <TextInput
+          placeholder="Confirm new password"
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          secureTextEntry={!showConfirmPassword}
+          style={styles.input}
+        />
+        <TouchableOpacity
+          style={{ position: 'absolute', right: 12, top: 18 }}
+          onPress={() => setShowConfirmPassword((prev) => !prev)}
+        >
+          <Ionicons name={showConfirmPassword ? 'eye-off' : 'eye'} size={22} color="#888" />
+        </TouchableOpacity>
+      </View>
       <TouchableOpacity style={styles.button} onPress={handleReset}>
         <Text style={styles.buttonText}>Reset Password</Text>
       </TouchableOpacity>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
@@ -14,6 +15,7 @@ import axios from 'axios';
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
     console.log('🔑 Login button pressed');
@@ -71,13 +73,21 @@ export default function LoginScreen({ navigation }) {
         keyboardType="email-address"
       />
 
-      <TextInput
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        style={styles.input}
-        secureTextEntry
-      />
+      <View style={{ position: 'relative' }}>
+        <TextInput
+          placeholder="Password"
+          value={password}
+          onChangeText={setPassword}
+          style={styles.input}
+          secureTextEntry={!showPassword}
+        />
+        <TouchableOpacity
+          style={{ position: 'absolute', right: 12, top: 13 }}
+          onPress={() => setShowPassword((prev) => !prev)}
+        >
+          <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={22} color="#888" />
+        </TouchableOpacity>
+      </View>
 
       <TouchableOpacity style={styles.button} onPress={handleLogin}>
         <Text style={styles.buttonText}>Login</Text>
