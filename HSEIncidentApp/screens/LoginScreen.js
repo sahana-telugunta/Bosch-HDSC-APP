@@ -87,6 +87,10 @@ export default function LoginScreen({ navigation }) {
         <Text style={styles.link}>Don't have an account? Sign up</Text>
       </TouchableOpacity>
 
+      <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
+        <Text style={styles.link}>Forgot Password?</Text>
+      </TouchableOpacity>
+
       <Text style={styles.footer}>For Bosch internal use only</Text>
     </View>
   );
