@@ -1,53 +1,62 @@
+// utils/mailer.js
 const nodemailer = require('nodemailer');
-const dotenv = require('dotenv');
-dotenv.config();
+require('dotenv').config();
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: process.env.EMAIL_USER,       // your app email
-    pass: process.env.EMAIL_PASS        // app password
-  }
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
 });
 
-const sendIncidentEmail = async ({ to, subject, incident, replyTo }) => {
-  try {
-    const toEmails = Array.isArray(to) ? to : [];
-
-    const mailOptions = {
-      from: `"HSE Incident App" <${process.env.EMAIL_USER}>`,
-      to: toEmails.join(','),
-      replyTo,
-      subject,
-      html: `
-        <h3>New incident has been reported:</h3>
-        <p>📍 <b>Area:</b> ${incident.incidentArea}</p>
-        <p>📂 <b>Category:</b> ${incident.category}</p>
-        <p>📝 <b>Comment:</b> ${incident.comment}</p>
-        <p>👥 <b>Reported To:</b> ${incident.reportingPersons?.join(', ') || 'N/A'}</p>
-        <p>🧑‍💼 <b>Reported By:</b> ${replyTo}</p>
-        ${
-          incident.imageBase64
-            ? `<p><b>Image:</b><br/><img src="cid:incidentImg" width="300"/></p>`
-            : '<p><i>No image submitted</i></p>'
-        }
-      `,
-      attachments: incident.imageBase64
-        ? [
-            {
-              filename: 'incident.jpg',
-              content: Buffer.from(incident.imageBase64, 'base64'),
-              cid: 'incidentImg'
-            }
-          ]
-        : []
-    };
-
-    await transporter.sendMail(mailOptions);
-    console.log('✅ Email sent to:', toEmails);
-  } catch (error) {
-    console.error('❌ Email sending failed:', error);
-  }
+/* ───────────── Generic helper (no attachment) ───────────── */
+const sendMail = async ({ to, subject, text, html }) => {
+  await transporter.sendMail({
+    from: `"HSE Incident App" <${process.env.EMAIL_USER}>`,
+    to,
+    subject,
+    text,
+    html,
+  });
+  console.log('✅ Email sent to:', to);
 };
 
-module.exports = { sendIncidentEmail };
+/* ───────────── Incident‑specific helper ───────────── */
+const sendIncidentEmail = async ({ to, subject, incident, replyTo }) => {
+  const toEmails = Array.isArray(to) ? to : [];
+
+  await transporter.sendMail({
+    from: `"HSE Incident App" <${process.env.EMAIL_USER}>`,
+    to: toEmails.join(','),
+    replyTo,
+    subject,
+    html: `
+      <h3>New incident has been reported:</h3>
+      <p>📍 <b>Area:</b> ${incident.incidentArea}</p>
+      <p>📂 <b>Category:</b> ${incident.category}</p>
+      <p>📝 <b>Comment:</b> ${incident.comment}</p>
+      <p>🧑‍💼 <b>Reported By:</b> ${replyTo}</p>
+      <p>👥 <b>Reported To:</b> ${incident.reportingPersons?.join(', ') || 'N/A'}</p>
+      ${
+        incident.imageBase64
+          ? `<img src="cid:incidentImg" width="300"/>`
+          : '<i>No image submitted</i>'
+      }
+    `,
+    attachments: incident.imageBase64
+      ? [
+          {
+            filename: 'incident.jpg',
+            content: Buffer.from(incident.imageBase64, 'base64'),
+            cid: 'incidentImg',
+          },
+        ]
+      : [],
+  });
+
+  console.log('✅ Incident email sent to:', toEmails);
+};
+
+/* -------- Export both helpers -------- */
+module.exports = { sendMail, sendIncidentEmail };
