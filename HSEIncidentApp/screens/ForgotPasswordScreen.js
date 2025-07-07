@@ -16,10 +16,23 @@ export default function ForgotPasswordScreen({ navigation }) {
     try {
       await axios.post('http://192.168.29.135:5000/api/auth/forgot-password', { email });
       Alert.alert('Success', 'Reset code sent to your email');
-      navigation.navigate('ResetPassword', { email }); // go to next screen
+      navigation.navigate('ResetPassword', { email }); // go to reset screen
     } catch (error) {
-      console.error('Error sending code:', error);
-      Alert.alert('Error', 'Could not send reset code');
+      console.log('Forgot password error:', error?.response?.data || error.message);
+      if (error.response && error.response.status === 404) {
+        Alert.alert(
+          'Invalid mail Id or User Not Found',
+          'Enter proper mail id or Please sign up if not done yet.',
+          [
+            { text: 'Sign Up', onPress: () => navigation.navigate('Signup') },
+            { text: 'Cancel', style: 'cancel' },
+          ]
+        );
+      } else if (error.response && error.response.data && error.response.data.message) {
+        Alert.alert('Error', error.response.data.message);
+      } else {
+        Alert.alert('Error', 'Something went wrong. Please try again later.');
+      }
     }
   };
 
