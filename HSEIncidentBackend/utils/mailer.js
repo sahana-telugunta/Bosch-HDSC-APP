@@ -35,21 +35,22 @@ const sendIncidentEmail = async ({ to, subject, incident, replyTo }) => {
       <h3>New incident has been reported:</h3>
       <p>📍 <b>Area:</b> ${incident.incidentArea}</p>
       <p>📂 <b>Category:</b> ${incident.category}</p>
-      <p>📝 <b>Comment:</b> ${incident.comment}</p>
+      <p>📝 <b>Description:</b> ${incident.description}</p>
       <p>🧑‍💼 <b>Reported By:</b> ${replyTo}</p>
       <p>👥 <b>Reported To:</b> ${incident.reportingPersons?.join(', ') || 'N/A'}</p>
       ${
         incident.imageBase64
-          ? `<img src="cid:incidentImg" width="300"/>`
-          : '<i>No image submitted</i>'
+          ? `<p>📸 <b>Incident image is attached below.</b></p>`
+          : '<p><i>No image submitted</i></p>'
       }
     `,
     attachments: incident.imageBase64
       ? [
           {
             filename: 'incident.jpg',
-            content: Buffer.from(incident.imageBase64, 'base64'),
-            cid: 'incidentImg',
+            content: incident.imageBase64,
+            encoding: 'base64',
+            contentType: 'image/jpeg',
           },
         ]
       : [],
@@ -58,5 +59,50 @@ const sendIncidentEmail = async ({ to, subject, incident, replyTo }) => {
   console.log('✅ Incident email sent to:', toEmails);
 };
 
-/* -------- Export both helpers -------- */
-module.exports = { sendMail, sendIncidentEmail };
+/* ───────────── Confirmation to reporter ───────────── */
+
+const sendReporterConfirmation = async ({ to, incident }) => {
+  await transporter.sendMail({
+    from: `"HSE Incident App" <${process.env.EMAIL_USER}>`,
+    to,
+    subject: 'Incident registered successfully',
+    html: `
+      <p>Hi,</p>
+      <p>Your incident was submitted and forwarded to: 
+         <b>${incident.reportingPersons?.join(', ') || 'N/A'}</b>.</p>
+
+      <h3>Incident Details</h3>
+      <p>📍 <b>Area:</b> ${incident.incidentArea}</p>
+      <p>📂 <b>Category:</b> ${incident.category}</p>
+      <p>📝 <b>Description:</b> ${incident.description}</p>
+      <p>👥 <b>Reported To:</b> ${incident.reportingPersons?.join(', ') || 'N/A'}</p>
+
+      ${
+        incident.imageBase64
+          ? '<p>📸 <b>Incident image attached:</b><br><img src="cid:incidentImage" width="300"/></p>'
+          : '<p><i>No image submitted</i></p>'
+      }
+    `,
+    attachments: incident.imageBase64
+      ? [
+          {
+            filename: 'incident.jpg',
+            content: incident.imageBase64,
+            encoding: 'base64',
+            contentType: 'image/jpeg',
+            cid: 'incidentImage',   // ★ referenced above
+          },
+        ]
+      : [],
+  });
+
+  console.log('✅ Confirmation email sent to reporter:', to);
+};
+
+
+/* -------- Export all helpers -------- */
+module.exports = {
+  sendMail,
+  sendIncidentEmail,
+  sendReporterConfirmation,
+};

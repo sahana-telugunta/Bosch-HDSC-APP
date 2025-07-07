@@ -19,7 +19,7 @@ import { Ionicons } from '@expo/vector-icons';   // ← icon library
 export default function IncidentScreen({ navigation }) {
   const [incidentArea, setIncidentArea] = useState('');
   const [category, setCategory] = useState('Select Category');
-  const [comment, setComment] = useState('');
+  const [description, setDescription] = useState('');
   const [uploadImage, setUploadImage] = useState(null);
   const [cameraImage, setCameraImage] = useState(null);
   const [reportingPersons, setReportingPersons] = useState([]);
@@ -69,7 +69,7 @@ export default function IncidentScreen({ navigation }) {
 
   /* ───── Submit handler ───── */
   const handleSubmit = async () => {
-    if (!incidentArea || !category || !comment || reportingPersons.length === 0) {
+    if (!incidentArea || !category || !description || reportingPersons.length === 0) {
       Alert.alert('Error', 'Please fill all fields and select at least one reporter.');
       return;
     }
@@ -79,7 +79,7 @@ export default function IncidentScreen({ navigation }) {
       await axios.post('http://192.168.29.135:5000/api/incidents', {
         incidentArea,
         category,
-        comment,
+        description,
         imageBase64: finalImage,
         email,
         reportingPersons,
@@ -88,7 +88,7 @@ export default function IncidentScreen({ navigation }) {
       // reset form
       setIncidentArea('');
       setCategory('HSE Incident');
-      setComment('');
+      setDescription('');
       setUploadImage(null);
       setCameraImage(null);
       setReportingPersons([]);
@@ -212,12 +212,12 @@ export default function IncidentScreen({ navigation }) {
         selectedStyle={styles.selectedStyle}
       />
 
-      <Text style={styles.label}>Comments:</Text>
+      <Text style={styles.label}>Description:</Text>
       <TextInput
         style={[styles.input, { height: 80 }]}
-        placeholder="Enter comments"
-        value={comment}
-        onChangeText={setComment}
+        placeholder="Enter Description"
+        value={description}
+        onChangeText={setDescription}
         multiline
       />
 

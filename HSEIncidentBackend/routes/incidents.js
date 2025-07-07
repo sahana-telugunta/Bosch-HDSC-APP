@@ -1,7 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const Incident = require('../models/Incident');
-const { sendIncidentEmail } = require('../utils/mailer');
+const {
+  sendIncidentEmail,
+  sendReporterConfirmation,
+} = require('../utils/mailer');
 
 // Create incident
 router.post('/', async (req, res) => {
@@ -9,7 +12,7 @@ router.post('/', async (req, res) => {
     const {
       incidentArea,
       category,
-      comment,
+      description,
       imageBase64,
       email, // this is the reporter's email (logged-in user)
       reportingPersons = [],
@@ -18,7 +21,7 @@ router.post('/', async (req, res) => {
     const incident = new Incident({
       location: incidentArea,
       category,
-      comment,
+      description,
       imageBase64,
       email,
       reportingPersons,
@@ -26,21 +29,37 @@ router.post('/', async (req, res) => {
 
     await incident.save();
 
+    // Prepare recipient emails
+    const recipientEmails = Array.isArray(reportingPersons)
+      ? reportingPersons.map(name =>
+          `${name.toLowerCase().replace(/\s+/g, '')}@gmail.com`
+        )
+      : [];
+
+    // 1. Send to Reporting Persons
     await sendIncidentEmail({
-      to: Array.isArray(reportingPersons)
-        ? reportingPersons.map(name =>`${name.toLowerCase().replace(/\s+/g, '')}@gmail.com`
-)
-        : [],
+      to: recipientEmails,
       subject: 'New HSE Incident Reported',
       incident: {
         incidentArea,
         category,
-        comment,
+        description,
         reportingPersons,
         imageBase64,
-        reportedBy: email, // pass reporter's email to email body
       },
-      replyTo: email, // set reply-to
+      replyTo: email, // logged-in user
+    });
+
+    // 2. Send confirmation to Reporter
+    await sendReporterConfirmation({
+      to: email,
+      incident: {
+        incidentArea,
+        category,
+        description,
+        reportingPersons,
+        imageBase64,
+      },
     });
 
     res.status(201).json({ message: 'Incident saved' });
