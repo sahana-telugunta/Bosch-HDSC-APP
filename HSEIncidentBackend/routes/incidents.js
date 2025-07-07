@@ -1,23 +1,22 @@
 const express = require('express');
 const router = express.Router();
 const Incident = require('../models/Incident');
-const sendIncidentEmail = require('../utils/mailer');
-
+const { sendIncidentEmail } = require('../utils/mailer');
 
 // Create incident
 router.post('/', async (req, res) => {
   try {
     const {
-      incidentArea, // sent from frontend
+      incidentArea,
       category,
       comment,
       imageBase64,
-      email,
+      email, // this is the reporter's email (logged-in user)
       reportingPersons = [],
     } = req.body;
 
     const incident = new Incident({
-      location: incidentArea,        // Map to DB field "location"
+      location: incidentArea,
       category,
       comment,
       imageBase64,
@@ -27,11 +26,9 @@ router.post('/', async (req, res) => {
 
     await incident.save();
 
-    // Compose and send email
     await sendIncidentEmail({
       to: Array.isArray(reportingPersons)
-        ? reportingPersons.map(name =>
-  `${name.toLowerCase().replace(/\s+/g, '')}@gmail.com`
+        ? reportingPersons.map(name =>`${name.toLowerCase().replace(/\s+/g, '')}@gmail.com`
 )
         : [],
       subject: 'New HSE Incident Reported',
@@ -41,9 +38,10 @@ router.post('/', async (req, res) => {
         comment,
         reportingPersons,
         imageBase64,
+        reportedBy: email, // pass reporter's email to email body
       },
+      replyTo: email, // set reply-to
     });
-
 
     res.status(201).json({ message: 'Incident saved' });
   } catch (err) {
@@ -55,7 +53,7 @@ router.post('/', async (req, res) => {
 // Get incidents by user email
 router.get('/:email', async (req, res) => {
   try {
-    const incidents = await Incident.find({ email: req.params.email });
+    const incidents = await Incident.find({ email: req.params.email }).sort({ createdAt: -1 });
     res.json(incidents);
   } catch (err) {
     console.error('❌ Error fetching incidents:', err);

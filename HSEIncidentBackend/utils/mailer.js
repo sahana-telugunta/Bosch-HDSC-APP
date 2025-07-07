@@ -1,21 +1,23 @@
 const nodemailer = require('nodemailer');
-require('dotenv').config();
+const dotenv = require('dotenv');
+dotenv.config();
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS, // App password
-  },
+    user: process.env.EMAIL_USER,       // your app email
+    pass: process.env.EMAIL_PASS        // app password
+  }
 });
 
-const sendIncidentEmail = async ({ to, subject, incident }) => {
+const sendIncidentEmail = async ({ to, subject, incident, replyTo }) => {
   try {
     const toEmails = Array.isArray(to) ? to : [];
 
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: `"HSE Incident App" <${process.env.EMAIL_USER}>`,
       to: toEmails.join(','),
+      replyTo,
       subject,
       html: `
         <h3>New incident has been reported:</h3>
@@ -23,9 +25,10 @@ const sendIncidentEmail = async ({ to, subject, incident }) => {
         <p>📂 <b>Category:</b> ${incident.category}</p>
         <p>📝 <b>Comment:</b> ${incident.comment}</p>
         <p>👥 <b>Reported To:</b> ${incident.reportingPersons?.join(', ') || 'N/A'}</p>
+        <p>🧑‍💼 <b>Reported By:</b> ${replyTo}</p>
         ${
           incident.imageBase64
-            ? `<p>📸 <b>Incident image is attached below.</b></p>`
+            ? `<p><b>Image:</b><br/><img src="cid:incidentImg" width="300"/></p>`
             : '<p><i>No image submitted</i></p>'
         }
       `,
@@ -33,12 +36,11 @@ const sendIncidentEmail = async ({ to, subject, incident }) => {
         ? [
             {
               filename: 'incident.jpg',
-              content: incident.imageBase64,
-              encoding: 'base64',
-              contentType: 'image/jpeg',
-            },
+              content: Buffer.from(incident.imageBase64, 'base64'),
+              cid: 'incidentImg'
+            }
           ]
-        : [],
+        : []
     };
 
     await transporter.sendMail(mailOptions);
@@ -48,4 +50,4 @@ const sendIncidentEmail = async ({ to, subject, incident }) => {
   }
 };
 
-module.exports = sendIncidentEmail;
+module.exports = { sendIncidentEmail };
